@@ -11,9 +11,13 @@ from rest_framework.decorators import action
 from .serializers import *
 from .models import *
 from .permissions import IsSuperUser, IsOrgSuperUser, PasswordPermission
+from .cron import expire_passwords
+
+from common import send_notification
 
 from django.conf import settings
 from django.contrib.auth.models import User
+
 
 
 # Create your views here.
@@ -46,6 +50,7 @@ def send_otp(request):
         serializer = OTPSerializer(data=data_dict)
         if serializer.is_valid(raise_exception=True):
             serializer.save()
+            send_notification(request.data["email"], "Password manager otp", f"password manager otp is {otp}")
     except Exception as err:
         data["message"] = str(err)
         status_code = data["code"] = HTTP_400_BAD_REQUEST
@@ -179,6 +184,7 @@ class PasswordViewset(ModelViewSet):
             serializer = self.get_serializer(data=input_data)
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
+                expire_passwords(schedule=duration_from + timedelta(seconds=int(payload["duration"])))
         except Exception as err:
             data["message"] = str(err)
             status_code = data["code"] = HTTP_400_BAD_REQUEST
@@ -266,9 +272,16 @@ class SharedPasswordsViewset(ModelViewSet):
         status_code = HTTP_200_OK
         try:
             payload = request.data
+            org = Passwords.objects.get(id=payload["password"]).org_fk
+            shared_to_user = User.objects.get(id=payload["shared_to"])
+            if self.get_queryset().filter(shared_to_id=payload["shared_to"], password_id=payload["password"]).exists():
+                raise Exception("This password already shared with this member") 
+            
             serializer = SharePasswordSerializer(data=payload)
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
+                send_notification(org.email, f"{org.name} Password Shared", f"{org.name} Password Shared, from : {request.user.email} to : {shared_to_user.email}")
+
         except Exception as err:
             data["message"] = str(err)
             status_code = data["code"] = HTTP_400_BAD_REQUEST
@@ -289,3 +302,4 @@ class SharedPasswordsViewset(ModelViewSet):
             data["message"] = str(err)
             status_code = data["code"] = HTTP_400_BAD_REQUEST
         return Response(data, status=status_code)
+    

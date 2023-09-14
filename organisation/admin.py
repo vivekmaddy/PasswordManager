@@ -16,7 +16,7 @@ class OrganisationAdmin(admin.ModelAdmin):
 
 @admin.register(Passwords)
 class PasswordsAdmin(admin.ModelAdmin):
-    list_display = ('org_fk', 'hashed_password', 'raw_password')
+    list_display = ('org_fk', 'expired', 'hashed_password', 'raw_password')
 
 
 @admin.register(Members)

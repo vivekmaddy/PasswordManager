@@ -1,5 +1,10 @@
 asgiref==3.7.2
 Django==4.2.5
+django-common==0.1.51
+django-compat==1.0.15
+django-cron==0.6.0
+django-crontab==0.7.1
+django4-background-tasks==1.2.8
 djangorestframework==3.14.0
 password-strength==0.0.3.post2
 pytz==2023.3.post1
